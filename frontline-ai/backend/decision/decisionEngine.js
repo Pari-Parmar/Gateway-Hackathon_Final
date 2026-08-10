@@ -136,10 +136,21 @@ export function applyDecisionRules(aiDecision, guardrails) {
   // ── Rule 9: Out-of-scope → flag but don't block ───────────────────────
   if (aiDecision.is_out_of_scope && outcome === DECISION_OUTCOMES.AUTO_ROUTE) {
     outcome = DECISION_OUTCOMES.AUTO_ROUTE;
-    // No human needed for clear out-of-scope, but can be queued
     overrides.push({
       rule: "OUT_OF_SCOPE_FLAG",
       reason: "Message is out of scope for customer support.",
+    });
+  }
+
+  // ── Rule 10: If AI marked needs_human=true or ANGRY sentiment → human review ──
+  if (
+    (finalNeedsHuman || aiDecision.sentiment === "ANGRY") &&
+    outcome === DECISION_OUTCOMES.AUTO_ROUTE
+  ) {
+    outcome = DECISION_OUTCOMES.HUMAN_REVIEW;
+    overrides.push({
+      rule: "AI_RECOMMENDED_ESCALATION",
+      reason: "AI Model recommended human escalation or detected hostile customer sentiment.",
     });
   }
 

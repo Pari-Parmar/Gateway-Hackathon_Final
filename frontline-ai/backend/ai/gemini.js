@@ -17,12 +17,10 @@ let genAIClient = null;
 function getClient() {
   if (!genAIClient) {
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "your_gemini_api_key_here") {
-      throw new Error(
-        "GEMINI_API_KEY is not configured. Please set it in backend/.env"
-      );
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is not set in process.env");
     }
-    genAIClient = new GoogleGenAI({ apiKey });
+    genAIClient = new GoogleGenAI({ apiKey: apiKey || "" });
   }
   return genAIClient;
 }

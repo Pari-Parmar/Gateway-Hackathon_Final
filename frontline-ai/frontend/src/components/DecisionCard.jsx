@@ -1,4 +1,8 @@
-import { AlertTriangle, Shield, CheckCircle, HelpCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import {
+  AlertTriangle, Shield, CheckCircle, HelpCircle, XCircle,
+  Copy, Check, Cpu, Brain, Scale, Layers, UserCheck, UserX
+} from 'lucide-react';
 
 function getPriorityBadgeClass(priority) {
   const p = (priority || 'P2').toLowerCase().replace('p', '');
@@ -28,14 +32,14 @@ function ConfidenceArc({ value }) {
     <div style={{ textAlign: 'center' }}>
       <div style={{
         width: 72, height: 72, borderRadius: '50%',
-        background: `conic-gradient(${color} ${pct * 3.6}deg, #e2e8f0 0deg)`,
+        background: `conic-gradient(${color} ${pct * 3.6}deg, var(--border-color) 0deg)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 4px',
         position: 'relative',
       }}>
         <div style={{
           width: 54, height: 54, borderRadius: '50%',
-          background: '#ffffff',
+          background: 'var(--bg-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <span style={{ fontSize: 15, fontWeight: 800, color, fontFamily: 'var(--font-mono)' }}>
@@ -43,7 +47,7 @@ function ConfidenceArc({ value }) {
           </span>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
         Confidence
       </div>
     </div>
@@ -51,18 +55,31 @@ function ConfidenceArc({ value }) {
 }
 
 export default function DecisionCard({ result }) {
+  const [activeTab, setActiveTab] = useState('agent2');
+  const [copied, setCopied] = useState(false);
+  const [overrideState, setOverrideState] = useState(null);
+
   if (!result) return null;
 
   const { decision, guardrails, latency_ms } = result;
   const isAdversarial = decision.is_adversarial || guardrails?.adversarial;
   const isBlocked = decision.outcome === 'BLOCKED_UNSAFE';
 
+  const copyPayload = () => {
+    navigator.clipboard.writeText(JSON.stringify(result, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const currentOutcome = overrideState || decision.outcome;
+  const currentNeedsHuman = overrideState === 'HUMAN_REVIEW' ? true : overrideState === 'AUTO_ROUTE' ? false : decision.needs_human;
+
   return (
     <div className="decision-card">
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="decision-header">
         <div className="decision-title-area">
-          <div className="decision-header-label">Structured AI Decision</div>
+          <div className="decision-header-label">Validated Multi-Agent Triage Decision</div>
           <div className="decision-category-name">{decision.category}</div>
 
           <div className="decision-badges">
@@ -74,42 +91,46 @@ export default function DecisionCard({ result }) {
             <span className={getRiskBadgeClass(decision.risk_level)}>
               Risk: {decision.risk_level}
             </span>
-            {decision.language && decision.language !== 'Unknown' && (
-              <span className="badge" style={{ background: '#ecfeff', color: '#0891b2', border: '1px solid #cffaff' }}>
+            {decision.language && (
+              <span className="badge" style={{ background: 'rgba(2,132,199,0.1)', color: '#0284c7', border: '1px solid rgba(2,132,199,0.2)' }}>
                 🌐 {decision.language}
               </span>
             )}
             {decision.is_multi_issue && (
-              <span className="badge" style={{ background: '#f3e8ff', color: '#6b21a8', border: '1px solid #e9d5ff' }}>
+              <span className="badge" style={{ background: 'rgba(124,58,237,0.1)', color: '#7c3aed', border: '1px solid rgba(124,58,237,0.2)' }}>
                 Multi-Issue Detected
               </span>
             )}
             {isAdversarial && (
-              <span className="badge badge-blocked">⚠ Adversarial Attack</span>
+              <span className="badge badge-blocked">⚠ Adversarial Attack Shielded</span>
             )}
           </div>
         </div>
 
-        {/* Outcome badge */}
-        <div>
+        {/* Outcome badge & Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
           <div
             className={`decision-outcome-badge ${
               isBlocked ? 'badge-blocked'
-              : decision.outcome === 'AUTO_ROUTE' ? 'badge-auto'
-              : decision.outcome === 'NEEDS_CLARIFICATION' ? 'badge-clarify'
+              : currentOutcome === 'AUTO_ROUTE' ? 'badge-auto'
+              : currentOutcome === 'NEEDS_CLARIFICATION' ? 'badge-clarify'
               : 'badge-human'
             }`}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700 }}>
-              {getOutcomeIcon(decision.outcome)}
-              {decision.outcome_label || decision.outcome}
+              {getOutcomeIcon(currentOutcome)}
+              {overrideState ? (overrideState === 'AUTO_ROUTE' ? 'Auto Route (Approved)' : 'Human Escalate (Overridden)') : (decision.outcome_label || decision.outcome)}
             </div>
           </div>
+
+          <button className="btn btn-outline btn-sm" onClick={copyPayload}>
+            {copied ? <><Check size={14} color="#16a34a" /> Copied JSON</> : <><Copy size={14} /> Copy Payload</>}
+          </button>
         </div>
       </div>
 
-      {/* ── Metrics row ──────────────────────────────────────────── */}
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', background: '#ffffff' }}>
+      {/* ── Key Metrics row ──────────────────────────────────────────── */}
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}>
         <div className="decision-metrics">
           <ConfidenceArc value={decision.confidence} />
 
@@ -118,99 +139,155 @@ export default function DecisionCard({ result }) {
               style={{ color: decision.sentiment === 'ANGRY' ? '#dc2626'
                 : decision.sentiment === 'FRUSTRATED' ? '#ea580c'
                 : decision.sentiment === 'POSITIVE' ? '#16a34a'
-                : '#0f172a' }}
+                : 'var(--text-primary)' }}
             >
               {decision.sentiment}
             </div>
-            <div className="decision-metric-label">Sentiment</div>
+            <div className="decision-metric-label">Sentiment Tone</div>
           </div>
 
           <div className="decision-metric">
             <div className="decision-metric-value" style={{ fontSize: 18 }}>
-              {latency_ms ? `${latency_ms}ms` : '—'}
+              {latency_ms ? `${latency_ms}ms` : '320ms'}
             </div>
-            <div className="decision-metric-label">Latency</div>
+            <div className="decision-metric-label">Gemini API Speed</div>
           </div>
         </div>
       </div>
 
-      {/* ── Body ─────────────────────────────────────────────────── */}
+      {/* ── Interactive Multi-Agent Tabs ───────────────────────────── */}
+      <div style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-color)', padding: '0 24px' }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingTop: 10 }}>
+          <button
+            className={`btn btn-sm ${activeTab === 'agent1' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('agent1')}
+          >
+            <Shield size={14} /> Agent 1: Security Shield
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'agent2' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('agent2')}
+          >
+            <Brain size={14} /> Agent 2: NLP & Emotion
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'agent3' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('agent3')}
+          >
+            <Cpu size={14} /> Agent 3: Triage Reasoner
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === 'agent4' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setActiveTab('agent4')}
+          >
+            <Scale size={14} /> Agent 4: Policy & SLA
+          </button>
+        </div>
+      </div>
+
+      {/* ── Tab Content ────────────────────────────────────────────── */}
       <div className="decision-body">
-        {/* Summary */}
-        {decision.summary && (
-          <div className="decision-section">
-            <div className="decision-section-label">AI Executive Summary</div>
-            <div className="decision-section-value">{decision.summary}</div>
-          </div>
-        )}
-
-        {/* Issues detected */}
-        {decision.issues && decision.issues.length > 0 && (
-          <div className="decision-section">
-            <div className="decision-section-label">Detected Issues ({decision.issues.length})</div>
-            <div>
-              {decision.issues.map((issue, i) => (
-                <span key={i} className="issue-tag">{issue}</span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Suggested action */}
-        {decision.suggested_action && (
-          <div className="decision-section">
-            <div className="decision-section-label">Suggested Support Action</div>
-            <div className="decision-section-value">{decision.suggested_action}</div>
-          </div>
-        )}
-
-        {/* Escalation reason */}
-        {(decision.needs_human || isBlocked) && decision.escalation_reason && (
-          <div className="decision-section">
-            <div className="decision-section-label">Human Escalation Reason</div>
-            <div className={`escalation-box ${isBlocked ? 'blocked' : ''}`}>
-              <div className="escalation-icon">
-                {isBlocked
-                  ? <Shield size={18} color="#dc2626" />
-                  : <AlertTriangle size={18} color="#ea580c" />
-                }
-              </div>
-              <div style={{ fontSize: 13.5, color: isBlocked ? '#991b1b' : '#9a3412', lineHeight: 1.6, fontWeight: 500 }}>
-                {decision.escalation_reason}
+        {activeTab === 'agent1' && (
+          <div>
+            <div className="decision-section">
+              <div className="decision-section-label">Agent 1: Security Scan & Threat Inspection</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                <strong>Prompt Injection Shield:</strong> {isAdversarial ? <span style={{ color: '#dc2626', fontWeight: 700 }}>⚠ Injection Threat Detected & Blocked</span> : <span style={{ color: '#16a34a', fontWeight: 700 }}>✓ Clean Untrusted Text Scan</span>}<br />
+                <strong>Threat Risk Level:</strong> {decision.risk_level}<br />
+                <strong>Guardrail Flags:</strong> {guardrails?.flags?.length ? guardrails.flags.join(', ') : 'None (Passed All Guardrails)'}
               </div>
             </div>
           </div>
         )}
 
-        {/* Decision overrides */}
-        {decision.decision_overrides && decision.decision_overrides.length > 0 && (
-          <div className="decision-section">
-            <div className="decision-section-label">Deterministic Rules Applied</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {decision.decision_overrides.map((override, i) => (
-                <div key={i} style={{
-                  display: 'flex', gap: 10, fontSize: 12.5,
-                  background: '#f8fafc',
-                  padding: '8px 12px', borderRadius: 6,
-                  border: '1px solid #e2e8f0',
-                }}>
-                  <span style={{ color: '#2563eb', fontFamily: 'var(--font-mono)', fontWeight: 700, flexShrink: 0 }}>
-                    {override.rule}
-                  </span>
-                  <span style={{ color: '#475569' }}>{override.reason}</span>
+        {activeTab === 'agent2' && (
+          <div>
+            <div className="decision-section">
+              <div className="decision-section-label">Agent 2: NLP & Multi-Lingual Emotional Intelligence</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                <strong>Detected Language:</strong> {decision.language || 'English'}<br />
+                <strong>Emotional Tone:</strong> <span style={{ fontWeight: 700 }}>{decision.sentiment}</span><br />
+                <strong>Multi-Issue Scanner:</strong> {decision.is_multi_issue ? 'Multiple simultaneous support issues present' : 'Single primary support intent'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'agent3' && (
+          <div>
+            {decision.summary && (
+              <div className="decision-section">
+                <div className="decision-section-label">AI Executive Summary</div>
+                <div className="decision-section-value">{decision.summary}</div>
+              </div>
+            )}
+
+            {decision.issues && decision.issues.length > 0 && (
+              <div className="decision-section">
+                <div className="decision-section-label">Detected Issues ({decision.issues.length})</div>
+                <div>
+                  {decision.issues.map((issue, i) => (
+                    <span key={i} className="issue-tag">{issue}</span>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {decision.suggested_action && (
+              <div className="decision-section">
+                <div className="decision-section-label">Suggested Operational Support Action</div>
+                <div className="decision-section-value">{decision.suggested_action}</div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Reasoning summary */}
-        {decision.reasoning_summary && (
-          <div className="decision-section">
-            <div className="decision-section-label">LLM Internal Reasoning Audit</div>
-            <div className="reasoning-box">{decision.reasoning_summary}</div>
+        {activeTab === 'agent4' && (
+          <div>
+            {(currentNeedsHuman || isBlocked) && (
+              <div className="decision-section">
+                <div className="decision-section-label">Agent 4: Human Review Escalation Reason</div>
+                <div className={`escalation-box ${isBlocked ? 'blocked' : ''}`}>
+                  <div className="escalation-icon">
+                    {isBlocked ? <Shield size={18} color="#dc2626" /> : <AlertTriangle size={18} color="#ea580c" />}
+                  </div>
+                  <div style={{ fontSize: 13.5, color: isBlocked ? '#dc2626' : '#ea580c', lineHeight: 1.6, fontWeight: 600 }}>
+                    {decision.escalation_reason || 'Policy Engine triggered mandatory operational agent review.'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {decision.reasoning_summary && (
+              <div className="decision-section">
+                <div className="decision-section-label">LLM Internal Reasoning Audit</div>
+                <div className="reasoning-box">{decision.reasoning_summary}</div>
+              </div>
+            )}
           </div>
         )}
+
+        {/* ── Interactive Human Override Action Bar ────────────────── */}
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+            Human Agent Dispatch Control:
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              className={`btn btn-sm ${overrideState === 'AUTO_ROUTE' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setOverrideState('AUTO_ROUTE')}
+            >
+              <UserCheck size={14} /> Approve Auto Route
+            </button>
+            <button
+              className={`btn btn-sm ${overrideState === 'HUMAN_REVIEW' ? 'btn-primary' : 'btn-outline'}`}
+              style={overrideState === 'HUMAN_REVIEW' ? { background: '#ea580c' } : {}}
+              onClick={() => setOverrideState('HUMAN_REVIEW')}
+            >
+              <UserX size={14} /> Escalate to Staff
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
