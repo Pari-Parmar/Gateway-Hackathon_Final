@@ -1,0 +1,11 @@
+{
+  "name": "frontline-ai-root",
+  "version": "1.0.0",
+  "description": "FRONTLINE AI — Enterprise Customer Support Triage System",
+  "scripts": {
+    "start": "node backend/server.js",
+    "backend": "cd backend && npm start",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "node backend/server.js & cd frontend && npm run dev"
+  }
+}

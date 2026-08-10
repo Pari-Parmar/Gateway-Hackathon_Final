@@ -1,0 +1,21 @@
+{
+  "name": "frontline-ai-backend",
+  "version": "1.0.0",
+  "description": "FRONTLINE AI - Backend API for Customer Support Triage",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "uuid": "^10.0.0"
+  }
+}
