@@ -35,30 +35,39 @@
   --shadow-hover: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
 }
 
-/* ── Dark Theme Variant ─────────────────────────────────────────── */
+/* ── Dark Theme Variant (High Contrast & Crystal Clear Readability) ─── */
 [data-theme="dark"] {
   --bg-primary: #0b0f19;
   --bg-secondary: #111827;
-  --bg-card: #111827;
+  --bg-card: #1f2937;
   --bg-sidebar: #111827;
-  --bg-sidebar-hover: #1f2937;
-  --bg-sidebar-active: rgba(37, 99, 235, 0.2);
+  --bg-sidebar-hover: #374151;
+  --bg-sidebar-active: rgba(59, 130, 246, 0.25);
 
-  --border-color: #1f2937;
-  --border-subtle: #161e2e;
+  --border-color: #374151;
+  --border-subtle: #1f2937;
 
   --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --text-sidebar: #9ca3af;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  --text-sidebar: #d1d5db;
   --text-sidebar-active: #60a5fa;
 
   --accent-blue: #3b82f6;
-  --accent-blue-dim: rgba(59, 130, 246, 0.15);
+  --accent-blue-dim: rgba(59, 130, 246, 0.2);
 
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.7);
 }
+
+[data-theme="dark"] .badge-p0, [data-theme="dark"] .badge-blocked { background: rgba(220, 38, 38, 0.25); color: #fca5a5; border: 1px solid rgba(220, 38, 38, 0.5); }
+[data-theme="dark"] .badge-p1, [data-theme="dark"] .badge-human { background: rgba(234, 88, 12, 0.25); color: #fdba74; border: 1px solid rgba(234, 88, 12, 0.5); }
+[data-theme="dark"] .badge-p2 { background: rgba(37, 99, 235, 0.25); color: #93c5fd; border: 1px solid rgba(37, 99, 235, 0.5); }
+[data-theme="dark"] .badge-p3, [data-theme="dark"] .badge-auto { background: rgba(22, 163, 74, 0.25); color: #86efac; border: 1px solid rgba(22, 163, 74, 0.5); }
+[data-theme="dark"] .badge-clarify { background: rgba(217, 119, 6, 0.25); color: #fde047; border: 1px solid rgba(217, 119, 6, 0.5); }
+[data-theme="dark"] .textarea, [data-theme="dark"] .input, [data-theme="dark"] select { background: #111827; color: #f9fafb; border-color: #374151; }
+[data-theme="dark"] table th { background: #111827; color: #9ca3af; }
+[data-theme="dark"] table td { color: #f9fafb; border-color: #374151; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
