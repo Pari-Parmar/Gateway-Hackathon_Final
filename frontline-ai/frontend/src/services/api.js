@@ -153,6 +153,8 @@ function runLocalClassification(rawText) {
   let risk_level = "LOW";
   let needs_human = false;
   let issues = [];
+  let outcome = "AUTO_ROUTE";
+  let outcome_label = "Auto Route";
 
   const is_delivery_order = /\b(order|delivery|deliverd|deliver|product|item|package|parcel|shipping|late|delay|delayed|courier|tracking|sent)\b/i.test(lower);
   const is_technical = /\b(app|website|site|page|web|crash|working|broken|error|gateway|software|bug|slow|loading|respond|chalti)\b/i.test(lower) || lower.includes("kharab") || lower.includes("faltu");
