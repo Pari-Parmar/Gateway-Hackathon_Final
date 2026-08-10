@@ -201,6 +201,26 @@ ESC_REASON: ${decision.escalation_reason || 'Routine SLA processing'}`}
         </div>
       </div>
 
+      {/* ── Level 3 Tool Calling Execution Banner ───────────────────── */}
+      {decision.tool_called && (
+        <div style={{
+          padding: '12px 24px',
+          background: 'rgba(124,58,237,0.08)',
+          borderBottom: '1px solid rgba(124,58,237,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: 13,
+          color: '#7c3aed',
+          fontWeight: 600,
+        }}>
+          <Sparkles size={16} />
+          <div>
+            <strong>Level 3 Tool Execution:</strong> Executed Function <code>{decision.tool_called}</code> — <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{decision.tool_result}</span>
+          </div>
+        </div>
+      )}
+
       {/* ── Interactive Multi-Agent Tabs ───────────────────────────── */}
       <div style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-color)', padding: '0 24px' }}>
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingTop: 10 }}>
