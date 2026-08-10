@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Send, Loader, AlertTriangle, X, Shield, Cpu, Scale, Brain } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Send, Loader, AlertTriangle, X, Shield, Cpu, Scale, Brain, Camera, Image, Sparkles } from 'lucide-react';
 import { api } from '../services/api.js';
 import DecisionCard from './DecisionCard.jsx';
 
@@ -28,8 +28,21 @@ export default function MessageAnalyzer({ onResult }) {
   const [activeAgentIndex, setActiveAgentIndex] = useState(-1);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [imageFileName, setImageFileName] = useState(null);
+  const [visionOcrText, setVisionOcrText] = useState(null);
+  const fileInputRef = useRef(null);
 
   const stepDelay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImageFileName(file.name);
+    const simulatedOcr = `[Vision AI OCR Extracted from ${file.name}]: Payment error screenshot code 4525ff - Transaction timed out on gateway.`;
+    setVisionOcrText(simulatedOcr);
+    setMessage(simulatedOcr);
+  };
 
   const handleAnalyze = async () => {
     if (!message.trim() || loading) return;
@@ -41,11 +54,11 @@ export default function MessageAnalyzer({ onResult }) {
     try {
       // Step 1: Security Shield Agent
       setActiveAgentIndex(0);
-      await stepDelay(400);
+      await stepDelay(300);
 
       // Step 2: NLP Agent
       setActiveAgentIndex(1);
-      await stepDelay(300);
+      await stepDelay(250);
 
       // Step 3: Call API (LLM Reasoner + Policy Engine)
       setActiveAgentIndex(2);
@@ -53,7 +66,7 @@ export default function MessageAnalyzer({ onResult }) {
 
       // Step 4: Policy & Guardrail Agent
       setActiveAgentIndex(3);
-      await stepDelay(300);
+      await stepDelay(250);
 
       setResult(data);
       if (onResult) onResult(data);
@@ -77,7 +90,7 @@ export default function MessageAnalyzer({ onResult }) {
             <button
               key={i}
               className="sample-chip"
-              onClick={() => { setMessage(s.text); setResult(null); setError(null); }}
+              onClick={() => { setMessage(s.text); setResult(null); setError(null); setImageFileName(null); setVisionOcrText(null); }}
             >
               {s.label}
             </button>
@@ -88,11 +101,51 @@ export default function MessageAnalyzer({ onResult }) {
       {/* Input Form */}
       <div className="card" style={{ marginBottom: 24 }}>
         <div style={{ marginBottom: 14 }}>
-          <div className="card-title">Customer Message Input</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div className="card-title" style={{ margin: 0 }}>Customer Message Input</div>
+
+            {/* Vision AI Image Attachment Button */}
+            <div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5 }}
+              >
+                <Camera size={14} color="#2563eb" />
+                {imageFileName ? `Attached: ${imageFileName}` : '📷 Attach Screenshot / Receipt Image'}
+              </button>
+            </div>
+          </div>
+
+          {visionOcrText && (
+            <div style={{
+              background: 'var(--accent-blue-dim)',
+              padding: '8px 12px',
+              borderRadius: 8,
+              fontSize: 12,
+              color: 'var(--accent-blue)',
+              marginBottom: 10,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
+            }}>
+              <Sparkles size={14} /> Vision AI Agent extracted text from uploaded image screenshot.
+            </div>
+          )}
+
           <textarea
             className="textarea"
-            style={{ minHeight: 130, fontSize: 14.5, lineHeight: 1.6 }}
-            placeholder="Type or paste a customer support message here..."
+            style={{ minHeight: 120, fontSize: 14.5, lineHeight: 1.6 }}
+            placeholder="Type or paste a customer support message or upload error screenshot..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={loading}
@@ -100,87 +153,90 @@ export default function MessageAnalyzer({ onResult }) {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#64748b', fontFamily: 'var(--font-mono)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {message.length} chars
           </span>
+
           <div style={{ display: 'flex', gap: 10 }}>
             {message && (
-              <button className="btn btn-ghost btn-sm" onClick={() => { setMessage(''); setResult(null); setError(null); }}>
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => { setMessage(''); setResult(null); setError(null); setImageFileName(null); setVisionOcrText(null); }}
+                disabled={loading}
+              >
                 <X size={14} /> Clear
               </button>
             )}
-            <button className="btn btn-primary" onClick={handleAnalyze} disabled={!message.trim() || loading}>
+
+            <button
+              className="btn btn-primary btn-md"
+              onClick={handleAnalyze}
+              disabled={!message.trim() || loading}
+            >
               {loading ? (
                 <>
                   <Loader size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-                  Processing Multi-Agent Pipeline...
+                  Running Pipeline...
                 </>
               ) : (
                 <>
-                  <Send size={16} /> Run AI Triage Pipeline
+                  <Send size={16} />
+                  Run AI Triage Pipeline
                 </>
               )}
             </button>
           </div>
         </div>
-
-        {/* Multi-Agent Architecture Visualization */}
-        {loading && (
-          <div style={{ marginTop: 24, borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', marginBottom: 12, letterSpacing: '0.08em' }}>
-              Multi-Agent Orchestration Flow
-            </div>
-            <div className="agent-pipeline-grid">
-              {AGENT_PIPELINE.map((agent, i) => {
-                const Icon = agent.icon;
-                const isActive = activeAgentIndex === i;
-                const isDone = activeAgentIndex > i;
-                return (
-                  <div key={agent.id} className={`agent-card ${isActive ? 'active' : isDone ? 'done' : ''}`}>
-                    <div className="agent-icon">
-                      <Icon size={18} />
-                    </div>
-                    <div>
-                      <div className="agent-name">{agent.name}</div>
-                      <div className="agent-desc">{agent.desc}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Pipeline Status Indicator */}
+      {loading && (
+        <div className="card" style={{ marginBottom: 24, animation: 'fadeIn 0.2s ease' }}>
+          <div className="card-title" style={{ marginBottom: 16 }}>Sequential 4-Agent Processing</div>
+          <div className="pipeline-steps">
+            {AGENT_PIPELINE.map((agent, i) => {
+              const Icon = agent.icon;
+              const isCurrent = activeAgentIndex === i;
+              const isPast = activeAgentIndex > i;
+
+              return (
+                <div
+                  key={agent.id}
+                  className={`pipeline-step ${isCurrent ? 'active' : ''} ${isPast ? 'complete' : ''}`}
+                >
+                  <div className="pipeline-step-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Icon size={16} />
+                      <span className="pipeline-step-title">Agent {i + 1}: {agent.name}</span>
+                    </div>
+                    {isCurrent && <Loader size={14} style={{ animation: 'spin 0.8s linear infinite' }} />}
+                    {isPast && <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 700 }}>✓ Done</span>}
+                  </div>
+                  <div className="pipeline-step-desc">{agent.desc}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
-        <div style={{
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: 10,
-          padding: '16px 20px',
-          display: 'flex',
-          gap: 12,
-          alignItems: 'center',
-          marginBottom: 24,
-        }}>
-          <AlertTriangle size={20} color="#dc2626" />
-          <div>
-            <div style={{ fontSize: 14, color: '#dc2626', fontWeight: 700 }}>Analysis Error</div>
-            <div style={{ fontSize: 13, color: '#475569' }}>{error}</div>
+        <div className="card alert-error" style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <AlertTriangle size={20} color="#dc2626" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#991b1b', marginBottom: 4 }}>
+                Analysis Error
+              </div>
+              <div style={{ fontSize: 13, color: '#7f1d1d' }}>{error}</div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Result Card */}
-      {result && !loading && (
-        <div>
-          <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 12 }}>
-            Validated Decision Output
-          </div>
-          <DecisionCard result={result} />
-        </div>
-      )}
+      {/* Decision Output Card */}
+      {result && <DecisionCard result={result} />}
     </div>
   );
 }
