@@ -29,8 +29,8 @@ function normalizeText(input) {
 // ─── 4-Agent Pipeline ─────────────────────────────────────────────────────────
 function runLocalGuardrails(text) {
   const flags = [];
-  const lower = text.toLowerCase();
-  
+  const lower = text.toLowerCase().trim();
+
   const ADVERSARIAL_PATTERNS = [
     /ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|rules?)/i,
     /reveal\s+(your\s+)?(system\s+prompt|instructions?|api\s+key)/i,
@@ -49,7 +49,12 @@ function runLocalGuardrails(text) {
     }
   }
 
-  const isGibberish = /^[^\w\s]+$/.test(text) || /^([a-zA-Z])\1{8,}$/.test(text) || text.trim().length < 2;
+  // Detect non-dictionary keyboard mashing or random alphanumeric strings (e.g. grarger465b, asdfghjkl)
+  const isDictionaryOrKnown = /\b(app|payment|order|help|refund|delivery|hacked|password|login|website|hours|price|barabar|nathi|moghu|che|gando|teri|mera|faltu|bakwas|thanks|hello|hi)\b/i.test(lower);
+  const hasNoSpaces = !lower.includes(' ') && lower.length > 5;
+  const isAlphanumericMash = hasNoSpaces && !isDictionaryOrKnown && /\d|[b-df-hj-np-tv-z]{4,}/i.test(lower);
+  
+  const isGibberish = isAlphanumericMash || /^[^\w\s]+$/.test(text) || /^([a-zA-Z])\1{5,}$/.test(text) || text.trim().length < 2;
   if (isGibberish) flags.push("GIBBERISH_INPUT");
 
   return { adversarial, isGibberish, flags };
