@@ -113,7 +113,21 @@ function runLocalClassification(text) {
   let outcome = "AUTO_ROUTE";
   let outcome_label = "Auto Route";
 
-  if (/\b(payment|charged|deducted|transaction|double charge|money|kat)\b/i.test(lower)) {
+  // Check hostility / insults / complaints
+  const is_insult_or_hostile = /\b(fool|disgusting|horrible|rubbish|idiot|useless|terrible|worst|hate|bad|stupid)\b/i.test(lower);
+
+  if (/\b(app|crash|working|broken|error|gateway|software|bug|site|page)\b/i.test(lower)) {
+    category = "TECHNICAL";
+    priority = is_insult_or_hostile ? "P1" : "P2";
+    risk_level = is_insult_or_hostile ? "HIGH" : "MEDIUM";
+    needs_human = is_insult_or_hostile;
+    issues.push("Application Performance Malfunction");
+    if (is_insult_or_hostile) {
+      issues.push("Hostile / Insulting Customer Language");
+      outcome = "HUMAN_REVIEW";
+      outcome_label = "Human Review Required";
+    }
+  } else if (/\b(payment|charged|deducted|transaction|double charge|money|kat)\b/i.test(lower)) {
     category = "PAYMENT";
     priority = "P1";
     risk_level = "HIGH";
@@ -137,12 +151,14 @@ function runLocalClassification(text) {
     issues.push("Refund Claim Processing");
     outcome = "HUMAN_REVIEW";
     outcome_label = "Human Review Required";
-  } else if (/\b(app|crash|working|broken|error|gateway)\b/i.test(lower)) {
-    category = "TECHNICAL";
-    priority = "P2";
-    risk_level = "MEDIUM";
-    needs_human = false;
-    issues.push("Application Malfunction");
+  } else if (is_insult_or_hostile) {
+    category = "COMPLAINT";
+    priority = "P1";
+    risk_level = "HIGH";
+    needs_human = true;
+    issues.push("Customer Insult / Dissatisfaction Complaint");
+    outcome = "HUMAN_REVIEW";
+    outcome_label = "Human Review Required";
   } else if (/\b(movie|homework|weather|poem|recipe)\b/i.test(lower)) {
     category = "OUT_OF_SCOPE";
     priority = "P3";
@@ -169,7 +185,7 @@ function runLocalClassification(text) {
   }
 
   let sentiment = "NEUTRAL";
-  if (/\b(angry|furious|terrible|worst|hate)\b/i.test(lower)) sentiment = "ANGRY";
+  if (is_insult_or_hostile || /\b(angry|furious|terrible|worst|hate)\b/i.test(lower)) sentiment = "ANGRY";
   else if (/\b(frustrat|help|issue|problem|broken)\b/i.test(lower)) sentiment = "FRUSTRATED";
   else if (/\b(thanks|thank you|good|great)\b/i.test(lower)) sentiment = "POSITIVE";
 

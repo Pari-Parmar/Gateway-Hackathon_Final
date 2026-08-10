@@ -17,6 +17,7 @@ import { analyzeMessage, pingGemini } from "./ai/gemini.js";
 import { runGuardrails, sanitizeAIOutput } from "./guardrails/guardrails.js";
 import { applyDecisionRules } from "./decision/decisionEngine.js";
 import { runEvaluation } from "./evaluation/evaluator.js";
+import { db } from "./database.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,13 +25,109 @@ const PORT = process.env.PORT || 3001;
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({
-  origin: true, // Allow all local & network origins in development
+  origin: true,
   credentials: true,
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
 }));
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
+
+// ─── API Routes ───────────────────────────────────────────────────────────────
+
+app.post("/api/analyze", async (req, res) => {
+  const requestId = uuidv4();
+  const requestStart = Date.now();
+
+  try {
+    const { message } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({
+        error: "Invalid request. 'message' field is required.",
+        requestId,
+      });
+    }
+
+    const guardrailResult = runGuardrails(message);
+
+    if (guardrailResult.blocked && !guardrailResult.adversarial) {
+      const blockedDecision = {
+        category: "OUT_OF_SCOPE",
+        priority: "P3",
+        summary: guardrailResult.reason || "Message blocked by guardrails.",
+        suggested_action: "Review guardrail flags and respond to customer appropriately.",
+        needs_human: true,
+        confidence: 0.1,
+        language: "Unknown",
+        sentiment: "NEUTRAL",
+        risk_level: guardrailResult.risk,
+        issues: [],
+        is_multi_issue: false,
+        is_adversarial: guardrailResult.adversarial,
+        is_out_of_scope: true,
+        escalation_reason: guardrailResult.reason,
+        reasoning_summary: `Blocked by guardrail: ${guardrailResult.flags.join(", ")}`,
+        outcome: "BLOCKED_UNSAFE",
+        outcome_label: "Blocked — Safety Check Failed",
+        decision_overrides: [],
+        decision_rules_applied: ["GUARDRAIL_BLOCK"],
+      };
+
+      const totalLatency = Date.now() - requestStart;
+      db.insertTriage({ id: requestId, timestamp: new Date().toISOString(), message, decision: blockedDecision, latency_ms: totalLatency });
+
+      return res.json({
+        requestId,
+        decision: blockedDecision,
+        guardrails: { blocked: guardrailResult.blocked, adversarial: guardrailResult.adversarial, risk: guardrailResult.risk, flags: guardrailResult.flags },
+        latency_ms: totalLatency,
+        token_usage: null,
+      });
+    }
+
+    const messageToAnalyze = guardrailResult.sanitized || message;
+    let aiResult = await analyzeMessage(messageToAnalyze);
+
+    const sanitizedDecision = sanitizeAIOutput(aiResult.decision);
+    if (guardrailResult.adversarial) {
+      sanitizedDecision.is_adversarial = true;
+    }
+
+    const finalDecision = applyDecisionRules(sanitizedDecision, guardrailResult);
+    const totalLatency = Date.now() - requestStart;
+
+    // Persist into SQLite database
+    db.insertTriage({
+      id: requestId,
+      timestamp: new Date().toISOString(),
+      message,
+      decision: finalDecision,
+      latency_ms: totalLatency,
+    });
+
+    res.json({
+      requestId,
+      decision: finalDecision,
+      guardrails: { blocked: guardrailResult.blocked, adversarial: guardrailResult.adversarial, risk: guardrailResult.risk, flags: guardrailResult.flags },
+      latency_ms: totalLatency,
+      token_usage: aiResult.tokenUsage || null,
+    });
+  } catch (err) {
+    console.error(`[${requestId}] Unexpected error:`, err);
+    res.status(500).json({ error: err.message || "An error occurred.", requestId });
+  }
+});
+
+app.get("/api/stats", (req, res) => {
+  res.json(db.getStats());
+});
+
+app.get("/api/queue", (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  const history = db.getTriageHistory(limit);
+  res.json({ entries: history, total: history.length });
+});
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 const apiLimiter = rateLimit({
