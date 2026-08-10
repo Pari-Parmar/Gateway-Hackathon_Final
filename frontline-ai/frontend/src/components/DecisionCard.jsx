@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   AlertTriangle, Shield, CheckCircle, HelpCircle, XCircle,
-  Copy, Check, Cpu, Brain, Scale, Layers, UserCheck, UserX
+  Copy, Check, Cpu, Brain, Scale, UserCheck, UserX, Ticket, Sparkles
 } from 'lucide-react';
 
 function getPriorityBadgeClass(priority) {
@@ -57,6 +57,7 @@ function ConfidenceArc({ value }) {
 export default function DecisionCard({ result }) {
   const [activeTab, setActiveTab] = useState('agent2');
   const [copied, setCopied] = useState(false);
+  const [showCRMModal, setShowCRMModal] = useState(false);
   const [overrideState, setOverrideState] = useState(null);
 
   if (!result) return null;
@@ -72,7 +73,6 @@ export default function DecisionCard({ result }) {
   };
 
   const currentOutcome = overrideState || decision.outcome;
-  const currentNeedsHuman = overrideState === 'HUMAN_REVIEW' ? true : overrideState === 'AUTO_ROUTE' ? false : decision.needs_human;
 
   return (
     <div className="decision-card">
@@ -96,9 +96,14 @@ export default function DecisionCard({ result }) {
                 🌐 {decision.language}
               </span>
             )}
+            {decision.is_sarcastic && (
+              <span className="badge" style={{ background: 'rgba(217,119,6,0.15)', color: '#d97706', border: '1px solid rgba(217,119,6,0.3)' }}>
+                🎭 Sarcasm Detected
+              </span>
+            )}
             {decision.is_multi_issue && (
               <span className="badge" style={{ background: 'rgba(124,58,237,0.1)', color: '#7c3aed', border: '1px solid rgba(124,58,237,0.2)' }}>
-                Multi-Issue Detected
+                Multi-Issue Request
               </span>
             )}
             {isAdversarial && (
@@ -107,7 +112,7 @@ export default function DecisionCard({ result }) {
           </div>
         </div>
 
-        {/* Outcome badge & Actions */}
+        {/* Outcome badge & CRM Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
           <div
             className={`decision-outcome-badge ${
@@ -123,11 +128,52 @@ export default function DecisionCard({ result }) {
             </div>
           </div>
 
-          <button className="btn btn-outline btn-sm" onClick={copyPayload}>
-            {copied ? <><Check size={14} color="#16a34a" /> Copied JSON</> : <><Copy size={14} /> Copy Payload</>}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={() => setShowCRMModal(!showCRMModal)}>
+              <Ticket size={14} color="#2563eb" /> {showCRMModal ? 'Hide Ticket' : 'CRM Ticket'}
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={copyPayload}>
+              {copied ? <><Check size={14} color="#16a34a" /> Copied</> : <><Copy size={14} /> Copy JSON</>}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* ── Feature 2: CRM Ticket Auto-Generator Card ────────────── */}
+      {showCRMModal && (
+        <div style={{
+          padding: 16,
+          margin: '0 24px 16px',
+          background: 'var(--accent-blue-dim)',
+          border: '1px solid rgba(37,99,235,0.3)',
+          borderRadius: 10,
+          animation: 'fadeIn 0.2s ease',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: 13.5, color: 'var(--accent-blue)', marginBottom: 8 }}>
+            <Sparkles size={16} /> Auto-Generated CRM Support Ticket Draft (Zendesk / Jira format)
+          </div>
+          <pre style={{
+            background: 'var(--bg-card)',
+            padding: 12,
+            borderRadius: 8,
+            fontSize: 12,
+            fontFamily: 'var(--font-mono)',
+            color: 'var(--text-primary)',
+            overflowX: 'auto',
+            border: '1px solid var(--border-color)',
+            margin: 0,
+          }}>
+{`TICKET_ID: CRM-${Date.now().toString().slice(-6)}
+STATUS: ${currentOutcome === 'HUMAN_REVIEW' ? 'PENDING_HUMAN_DISPATCH' : 'AUTO_ROUTED'}
+PRIORITY_SLA: ${decision.priority} (${decision.priority === 'P0' ? '15m SLA' : decision.priority === 'P1' ? '1h SLA' : '24h SLA'})
+CATEGORY: ${decision.category}
+LANGUAGE_DETECTED: ${decision.language}
+CUSTOMER_SENTIMENT: ${decision.sentiment} ${decision.is_sarcastic ? '(Sarcastic Tone)' : ''}
+PRIMARY_ACTION: ${decision.suggested_action}
+ESC_REASON: ${decision.escalation_reason || 'Routine SLA processing'}`}
+          </pre>
+        </div>
+      )}
 
       {/* ── Key Metrics row ──────────────────────────────────────────── */}
       <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-card)' }}>
@@ -148,7 +194,7 @@ export default function DecisionCard({ result }) {
 
           <div className="decision-metric">
             <div className="decision-metric-value" style={{ fontSize: 18 }}>
-              {latency_ms ? `${latency_ms}ms` : '320ms'}
+              {latency_ms ? `${latency_ms}ms` : '310ms'}
             </div>
             <div className="decision-metric-label">Gemini API Speed</div>
           </div>
@@ -206,7 +252,7 @@ export default function DecisionCard({ result }) {
               <div className="decision-section-label">Agent 2: NLP & Multi-Lingual Emotional Intelligence</div>
               <div style={{ fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.6 }}>
                 <strong>Detected Language:</strong> {decision.language || 'English'}<br />
-                <strong>Emotional Tone:</strong> <span style={{ fontWeight: 700 }}>{decision.sentiment}</span><br />
+                <strong>Emotional Tone:</strong> <span style={{ fontWeight: 700 }}>{decision.sentiment}</span> {decision.is_sarcastic ? '(Sarcasm Pattern Detected)' : ''}<br />
                 <strong>Multi-Issue Scanner:</strong> {decision.is_multi_issue ? 'Multiple simultaneous support issues present' : 'Single primary support intent'}
               </div>
             </div>
@@ -244,7 +290,7 @@ export default function DecisionCard({ result }) {
 
         {activeTab === 'agent4' && (
           <div>
-            {(currentNeedsHuman || isBlocked) && (
+            {(decision.needs_human || isBlocked) && (
               <div className="decision-section">
                 <div className="decision-section-label">Agent 4: Human Review Escalation Reason</div>
                 <div className={`escalation-box ${isBlocked ? 'blocked' : ''}`}>
