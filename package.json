@@ -1,0 +1,19 @@
+{
+  "name": "frontline-ai-root",
+  "version": "1.0.0",
+  "description": "FRONTLINE AI — Enterprise Customer Support Triage System",
+  "main": "api/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node frontline-ai/backend/server.js",
+    "build": "cd frontline-ai/frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "uuid": "^10.0.0"
+  }
+}
